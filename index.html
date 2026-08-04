@@ -250,9 +250,15 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // Estado da aplicação (Lista de colaboradores)
-            let equipe = [
+            const savedEquipe = localStorage.getItem('geradorDoc_equipe');
+            let equipe = savedEquipe ? JSON.parse(savedEquipe) : [
                 { id: Date.now(), nome: 'Igor Medeiros', reunioes: 39 }
             ];
+
+            // Função para salvar no LocalStorage
+            function salvarDados() {
+                localStorage.setItem('geradorDoc_equipe', JSON.stringify(equipe));
+            }
 
             // Elementos de input
             const inputNome = document.getElementById('inputNome');
@@ -279,6 +285,9 @@
 
             // Função principal de renderização
             function atualizarInterface() {
+                // Salvar dados no LocalStorage toda vez que a interface for atualizada
+                salvarDados();
+
                 // 1. Atualizar Lista na Sidebar
                 listaColaboradoresUI.innerHTML = '';
                 equipe.forEach(membro => {
