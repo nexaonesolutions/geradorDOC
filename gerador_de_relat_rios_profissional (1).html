@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Relatórios Profissional</title>
+    <!-- Tailwind CSS para estilização rápida e moderna -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons para ícones de interface limpos e profissionais -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- html2pdf.js para a conversão de HTML para PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb', // Blue-600
+                        secondary: '#475569', // Slate-600
+                        accent: '#3b82f6', // Blue-500
+                        background: '#f8fafc', // Slate-50
+                        surface: '#ffffff',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* Estilos específicos para impressão/PDF */
+        .pdf-page {
+            background-color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            border-radius: 0.5rem;
+        }
+
+        /* Animações suaves */
+        .transition-all {
+            transition-property: all;
+            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+            transition-duration: 300ms;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 antialiased p-4 md:p-8 flex flex-col md:flex-row gap-8">
+
+    <!-- Painel de Controle (Esquerda) -->
+    <aside class="w-full md:w-1/3 bg-white p-6 rounded-xl shadow-lg border border-slate-100 h-fit sticky top-8">
+        <header class="mb-6 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <div class="bg-blue-100 p-2 rounded-lg text-primary">
+                <i class="ph ph-files text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">Gerador Doc</h1>
+                <p class="text-sm text-slate-500">Criação rápida de relatórios</p>
+            </div>
+        </header>
+
+        <form id="reportForm" class="space-y-5">
+            
+            <div class="space-y-1">
+                <label class="block text-sm font-medium text-slate-700">Adicionar Colaborador</label>
+                <div class="flex gap-2">
+                    <div class="relative flex-1">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph ph-user text-slate-400"></i>
+                        </div>
+                        <input type="text" id="inputNome" placeholder="Nome (Ex: Igor)" 
+                            class="w-full pl-9 pr-2 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-sm">
+                    </div>
+                    <div class="relative w-24">
+                        <div class="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+                            <i class="ph ph-users-three text-slate-400"></i>
+                        </div>
+                        <input type="number" id="inputReunioes" placeholder="Qtd" min="0" 
+                            class="w-full pl-8 pr-2 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-sm">
+                    </div>
+                    <button type="button" id="btnAddPessoa"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg transition-colors flex items-center justify-center shadow-sm">
+                        <i class="ph ph-plus font-bold"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <p class="text-xs font-semibold text-slate-500 uppercase mb-2">Equipe Atual</p>
+                <ul id="listaColaboradoresUI" class="space-y-2 max-h-32 overflow-y-auto pr-1">
+                    <!-- Lista injetada via JS -->
+                </ul>
+            </div>
+
+            <div class="space-y-1">
+                <label for="periodo" class="block text-sm font-medium text-slate-700">Mês de Referência</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="ph ph-calendar-blank text-slate-400"></i>
+                    </div>
+                    <select id="periodo" name="periodo"
+                        class="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-sm appearance-none bg-white">
+                        <option value="Janeiro">Janeiro</option>
+                        <option value="Fevereiro">Fevereiro</option>
+                        <option value="Março">Março</option>
+                        <option value="Abril">Abril</option>
+                        <option value="Maio">Maio</option>
+                        <option value="Junho">Junho</option>
+                        <option value="Julho">Julho</option>
+                        <option value="Agosto" selected>Agosto</option>
+                        <option value="Setembro">Setembro</option>
+                        <option value="Outubro">Outubro</option>
+                        <option value="Novembro">Novembro</option>
+                        <option value="Dezembro">Dezembro</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label for="observacoes" class="block text-sm font-medium text-slate-700">Observações (Opcional)</label>
+                <textarea id="observacoes" name="observacoes" rows="3" placeholder="Destaques, metas atingidas pela equipe..."
+                    class="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all text-sm"></textarea>
+            </div>
+
+            <div class="pt-4 flex flex-col gap-3">
+                <button type="button" id="btnDownloadPDF"
+                    class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-200">
+                    <i class="ph ph-download-simple text-lg"></i>
+                    Baixar PDF
+                </button>
+            </div>
+        </form>
+    </aside>
+
+    <!-- Área de Visualização (Direita) -->
+    <main class="w-full md:w-2/3 flex flex-col items-center">
+        <div class="w-full max-w-[800px] mb-4 flex justify-between items-center px-2">
+            <h2 class="text-lg font-semibold text-slate-700 flex items-center gap-2">
+                <i class="ph ph-eye text-primary"></i> Preview do Documento
+            </h2>
+            <span class="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full font-medium">Tamanho A4</span>
+        </div>
+
+        <!-- Container que será exportado para PDF -->
+        <div id="relatorioArea" class="w-full max-w-[800px] pdf-page bg-white min-h-[1000px] relative pb-32">
+            
+            <!-- Cabeçalho do Relatório -->
+            <header class="border-b-2 border-primary pb-6 mb-8 flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-900 tracking-tight">RELATÓRIO DE DESEMPENHO</h1>
+                    <p class="text-slate-500 mt-1 uppercase text-sm font-semibold tracking-wider">Acompanhamento Mensal da Equipe</p>
+                </div>
+                <!-- Logo -->
+                <div class="w-16 h-16 bg-blue-50 rounded-xl border border-blue-100 flex items-center justify-center text-primary">
+                    <i class="ph-fill ph-users-three text-3xl"></i>
+                </div>
+            </header>
+
+            <!-- Informações Principais -->
+            <section class="grid grid-cols-3 gap-4 mb-8">
+                <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 col-span-1">
+                    <p class="text-xs text-slate-500 uppercase font-semibold mb-1"><i class="ph ph-calendar mr-1"></i> Período</p>
+                    <p id="outPeriodo" class="text-lg font-bold text-slate-800">Agosto / 2026</p>
+                    <p class="text-xs text-slate-500 mt-1">Emissão: <span id="dataEmissao"></span></p>
+                </div>
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 col-span-1">
+                    <p class="text-xs text-blue-600 uppercase font-semibold mb-1"><i class="ph ph-users mr-1"></i> Membros</p>
+                    <p id="outTotalMembros" class="text-2xl font-black text-blue-800">0</p>
+                    <p class="text-xs text-blue-600 mt-1">Colaboradores ativos</p>
+                </div>
+                <div class="bg-emerald-50 p-4 rounded-lg border border-emerald-100 col-span-1">
+                    <p class="text-xs text-emerald-600 uppercase font-semibold mb-1"><i class="ph ph-handshake mr-1"></i> Total Reuniões</p>
+                    <p id="outTotalReunioes" class="text-2xl font-black text-emerald-800">0</p>
+                    <p class="text-xs text-emerald-600 mt-1">Sessões computadas</p>
+                </div>
+            </section>
+
+            <!-- Tabela de Membros -->
+            <section class="mb-8">
+                <h3 class="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+                    <i class="ph ph-table text-primary"></i> Detalhamento por Colaborador
+                </h3>
+                
+                <div class="rounded-lg border border-slate-200 overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs uppercase font-semibold">
+                            <tr>
+                                <th class="py-3 px-4 w-12 text-center">#</th>
+                                <th class="py-3 px-4">Nome do Colaborador</th>
+                                <th class="py-3 px-4 text-right w-32">Reuniões</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaColaboradores" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Linhas inseridas via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Observações -->
+            <section class="mb-10">
+                <h3 class="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+                    <i class="ph ph-note text-primary"></i> Notas e Observações da Gestão
+                </h3>
+                <div class="bg-slate-50 p-5 rounded-lg border border-slate-200 min-h-[100px]">
+                    <p id="outObservacoes" class="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">Nenhuma observação adicional foi registrada para este período.</p>
+                </div>
+            </section>
+
+            <!-- Assinatura -->
+            <div class="absolute bottom-12 left-8 right-8">
+                <div class="flex justify-center mt-12 pt-8 border-t border-slate-200">
+                    <div class="text-center w-64">
+                        <div class="border-b border-slate-400 h-8 mb-2"></div>
+                        <p class="font-bold text-sm text-slate-800">Gestão de Equipe</p>
+                        <p class="text-xs text-slate-500">Assinatura do Responsável</p>
+                    </div>
+                </div>
+                
+                <footer class="mt-8 text-center text-xs text-slate-400 flex flex-col items-center">
+                    <p>Documento gerado automaticamente pelo Sistema de Gestão Interna</p>
+                    <p class="mt-1 flex items-center gap-1"><i class="ph-fill ph-shield-check text-emerald-500"></i> Relatório consolidado validado</p>
+                </footer>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Estado da aplicação (Lista de colaboradores)
+            let equipe = [
+                { id: Date.now(), nome: 'Igor Medeiros', reunioes: 39 }
+            ];
+
+            // Elementos de input
+            const inputNome = document.getElementById('inputNome');
+            const inputReunioes = document.getElementById('inputReunioes');
+            const btnAddPessoa = document.getElementById('btnAddPessoa');
+            const periodoSelect = document.getElementById('periodo');
+            const observacoesInput = document.getElementById('observacoes');
+
+            // Elementos de UI / Saída
+            const listaColaboradoresUI = document.getElementById('listaColaboradoresUI');
+            const tabelaColaboradores = document.getElementById('tabelaColaboradores');
+            const outPeriodo = document.getElementById('outPeriodo');
+            const outTotalMembros = document.getElementById('outTotalMembros');
+            const outTotalReunioes = document.getElementById('outTotalReunioes');
+            const outObservacoes = document.getElementById('outObservacoes');
+            const dataEmissao = document.getElementById('dataEmissao');
+            const btnDownloadPDF = document.getElementById('btnDownloadPDF');
+
+            // Setar data atual
+            const hoje = new Date();
+            dataEmissao.textContent = hoje.toLocaleDateString('pt-BR');
+
+            // Função principal de renderização
+            function atualizarInterface() {
+                // 1. Atualizar Lista na Sidebar
+                listaColaboradoresUI.innerHTML = '';
+                equipe.forEach(membro => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center bg-white p-2 border border-slate-100 rounded shadow-sm text-sm';
+                    li.innerHTML = `
+                        <div class="flex flex-col">
+                            <span class="font-medium text-slate-800">${membro.nome}</span>
+                            <span class="text-xs text-slate-500">${membro.reunioes} reuniões</span>
+                        </div>
+                        <button class="text-red-500 hover:bg-red-50 p-1 rounded transition-colors" onclick="removerMembro(${membro.id})">
+                            <i class="ph ph-trash"></i>
+                        </button>
+                    `;
+                    listaColaboradoresUI.appendChild(li);
+                });
+
+                if(equipe.length === 0) {
+                    listaColaboradoresUI.innerHTML = '<li class="text-xs text-slate-400 italic text-center py-2">Nenhum colaborador adicionado</li>';
+                }
+
+                // 2. Atualizar Tabela no Relatório (Preview)
+                tabelaColaboradores.innerHTML = '';
+                let totalReunioes = 0;
+
+                equipe.forEach((membro, index) => {
+                    totalReunioes += membro.reunioes;
+                    const tr = document.createElement('tr');
+                    // 'page-break-inside: avoid' ajuda a não cortar a linha no meio se o PDF tiver múltiplas páginas
+                    tr.style.pageBreakInside = 'avoid'; 
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 text-center text-slate-400 font-medium">${index + 1}</td>
+                        <td class="py-3 px-4 font-medium text-slate-800">${membro.nome}</td>
+                        <td class="py-3 px-4 text-right font-bold text-blue-600">${membro.reunioes}</td>
+                    `;
+                    tabelaColaboradores.appendChild(tr);
+                });
+
+                if(equipe.length === 0) {
+                    tabelaColaboradores.innerHTML = '<tr><td colspan="3" class="py-6 text-center text-slate-400 italic">Lista vazia. Adicione colaboradores ao lado.</td></tr>';
+                }
+
+                // 3. Atualizar Indicadores Globais
+                outTotalMembros.textContent = equipe.length;
+                outTotalReunioes.textContent = totalReunioes;
+                outPeriodo.textContent = `${periodoSelect.value} / ${hoje.getFullYear()}`;
+
+                // 4. Atualizar Observações
+                const obs = observacoesInput.value;
+                if (obs && obs.trim() !== '') {
+                    outObservacoes.textContent = obs;
+                    outObservacoes.classList.remove('italic', 'text-slate-400');
+                } else {
+                    outObservacoes.textContent = 'Nenhuma observação adicional foi registrada para este período.';
+                    outObservacoes.classList.add('italic', 'text-slate-400');
+                }
+            }
+
+            // Expor função de remover para o escopo global (usado no onclick)
+            window.removerMembro = function(id) {
+                equipe = equipe.filter(m => m.id !== id);
+                atualizarInterface();
+            };
+
+            // Adicionar novo membro
+            btnAddPessoa.addEventListener('click', () => {
+                const nome = inputNome.value.trim();
+                const reunioes = parseInt(inputReunioes.value);
+
+                if (!nome) {
+                    alert('Por favor, informe o nome do colaborador.');
+                    return;
+                }
+                if (isNaN(reunioes) || reunioes < 0) {
+                    alert('Informe uma quantidade válida de reuniões.');
+                    return;
+                }
+
+                equipe.push({
+                    id: Date.now(),
+                    nome: nome,
+                    reunioes: reunioes
+                });
+
+                // Limpar inputs e focar no nome
+                inputNome.value = '';
+                inputReunioes.value = '';
+                inputNome.focus();
+
+                atualizarInterface();
+            });
+
+            // Adicionar ao pressionar Enter no input de reuniões
+            inputReunioes.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    btnAddPessoa.click();
+                }
+            });
+
+            // Listeners para atualizar preview dinâmico
+            periodoSelect.addEventListener('change', atualizarInterface);
+            observacoesInput.addEventListener('input', atualizarInterface);
+
+            // Inicializar a interface
+            atualizarInterface();
+
+            // Lógica para gerar PDF
+            btnDownloadPDF.addEventListener('click', () => {
+                const originalText = btnDownloadPDF.innerHTML;
+                btnDownloadPDF.innerHTML = '<i class="ph ph-spinner animate-spin text-lg"></i> Gerando PDF...';
+                btnDownloadPDF.classList.add('opacity-80', 'cursor-not-allowed');
+
+                const elementoParaPDF = document.getElementById('relatorioArea');
+                const mes = periodoSelect.value;
+                const nomeArquivo = `Relatorio_Equipe_${mes}.pdf`;
+
+                const opt = {
+                    margin:       0,
+                    filename:     nomeArquivo,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true,
+                        letterRendering: true,
+                        scrollY: 0
+                    },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // Tenta evitar cortar elementos ao meio
+                };
+
+                html2pdf().set(opt).from(elementoParaPDF).save().then(() => {
+                    setTimeout(() => {
+                        btnDownloadPDF.innerHTML = originalText;
+                        btnDownloadPDF.classList.remove('opacity-80', 'cursor-not-allowed');
+                    }, 1000);
+                }).catch(err => {
+                    console.error('Erro ao gerar PDF:', err);
+                    alert('Houve um erro ao gerar o PDF. Verifique o console.');
+                    btnDownloadPDF.innerHTML = originalText;
+                    btnDownloadPDF.classList.remove('opacity-80', 'cursor-not-allowed');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
