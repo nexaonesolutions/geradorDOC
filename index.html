@@ -339,7 +339,21 @@
                 // 5. Atualizar Gráfico de Desempenho
                 const nomes = equipe.map(m => m.nome);
                 const dadosReunioes = equipe.map(m => m.reunioes);
-                const cores = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#10b981', '#34d399', '#6ee7b7', '#f59e0b', '#fbbf24', '#fcd34d', '#ec4899', '#a855f7'];
+                // Cores distintas para destacar melhor cada fatia
+                const cores = [
+                    '#3b82f6', // Blue
+                    '#f43f5e', // Rose
+                    '#f59e0b', // Amber
+                    '#10b981', // Emerald
+                    '#8b5cf6', // Purple
+                    '#06b6d4', // Cyan
+                    '#f97316', // Orange
+                    '#ec4899', // Pink
+                    '#84cc16', // Lime
+                    '#14b8a6', // Teal
+                    '#ef4444', // Red
+                    '#6366f1'  // Indigo
+                ];
 
                 if (chartInstance) {
                     chartInstance.destroy();
