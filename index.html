@@ -12,6 +12,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <!-- Chart.js para o gráfico de pizza -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS para leitura de Excel no navegador -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -139,6 +141,36 @@
                     Baixar PDF
                 </button>
             </div>
+
+            <!-- Inteligência Artificial Groq -->
+            <div class="pt-4 mt-4 border-t border-slate-200 space-y-4">
+                <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <i class="ph ph-brain text-purple-600 text-lg"></i> Análise com IA (Groq)
+                </h3>
+                
+                <div class="space-y-1">
+                    <label for="groqApiKey" class="block text-xs font-medium text-slate-700">Groq API Key</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="ph ph-key text-slate-400"></i>
+                        </div>
+                        <input type="password" id="groqApiKey" placeholder="gsk_..."
+                            class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-xs">
+                    </div>
+                </div>
+
+                <div class="space-y-1">
+                    <label for="fileUpload" class="block text-xs font-medium text-slate-700">Arquivo Excel (.xlsx, .csv)</label>
+                    <input type="file" id="fileUpload" accept=".xlsx, .xls, .csv"
+                        class="block w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer border border-slate-300 rounded-lg">
+                </div>
+
+                <button type="button" id="btnAnalyzeAI"
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-all shadow-md shadow-purple-200 text-sm">
+                    <i class="ph ph-magic-wand text-lg"></i>
+                    Gerar Análise IA
+                </button>
+            </div>
         </form>
     </aside>
 
@@ -229,6 +261,16 @@
                 </div>
             </section>
 
+            <!-- Análise IA -->
+            <section id="sectionAI" class="mb-10 hidden" style="page-break-inside: avoid;">
+                <h3 class="text-lg font-bold text-slate-800 border-b border-slate-200 pb-2 mb-4 flex items-center gap-2">
+                    <i class="ph ph-sparkle text-purple-600"></i> Análise Inteligente (IA)
+                </h3>
+                <div class="bg-purple-50 p-5 rounded-lg border border-purple-200 min-h-[100px]">
+                    <div id="outAnaliseIA" class="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap"></div>
+                </div>
+            </section>
+
             <!-- Assinatura -->
             <div class="mt-16 w-full" style="page-break-inside: avoid;">
                 <div class="flex justify-center pt-8 border-t border-slate-200">
@@ -278,6 +320,22 @@
             const btnDownloadPDF = document.getElementById('btnDownloadPDF');
             const canvasGrafico = document.getElementById('graficoDesempenho');
             let chartInstance = null;
+
+            // Elementos de IA
+            const groqApiKeyInput = document.getElementById('groqApiKey');
+            const fileUpload = document.getElementById('fileUpload');
+            const btnAnalyzeAI = document.getElementById('btnAnalyzeAI');
+            const sectionAI = document.getElementById('sectionAI');
+            const outAnaliseIA = document.getElementById('outAnaliseIA');
+
+            // Carregar chave do Groq salva
+            const savedApiKey = localStorage.getItem('geradorDoc_groq_key');
+            if (savedApiKey) {
+                groqApiKeyInput.value = savedApiKey;
+            }
+            groqApiKeyInput.addEventListener('input', () => {
+                localStorage.setItem('geradorDoc_groq_key', groqApiKeyInput.value);
+            });
 
             // Setar data atual
             const hoje = new Date();
@@ -481,6 +539,86 @@
                     btnDownloadPDF.innerHTML = originalText;
                     btnDownloadPDF.classList.remove('opacity-80', 'cursor-not-allowed');
                 });
+            });
+
+            // Lógica da IA com Groq e SheetJS
+            btnAnalyzeAI.addEventListener('click', async () => {
+                const apiKey = groqApiKeyInput.value.trim();
+                const file = fileUpload.files[0];
+
+                if (!apiKey) {
+                    alert('Por favor, insira sua chave da API do Groq.');
+                    return;
+                }
+                if (!file) {
+                    alert('Por favor, selecione um arquivo Excel ou CSV.');
+                    return;
+                }
+
+                const originalBtnContent = btnAnalyzeAI.innerHTML;
+                btnAnalyzeAI.innerHTML = '<i class="ph ph-spinner animate-spin text-lg"></i> Analisando...';
+                btnAnalyzeAI.disabled = true;
+
+                try {
+                    // 1. Ler o arquivo com SheetJS
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (json.length === 0) {
+                        throw new Error('A planilha está vazia.');
+                    }
+
+                    const jsonDataString = JSON.stringify(json);
+
+                    // 2. Montar prompt para a IA
+                    const prompt = `Você é um assistente especializado em análise de dados corporativos. 
+Aqui estão os dados extraídos de uma planilha de relatórios:
+${jsonDataString}
+
+Por favor, faça um resumo profissional, claro e objetivo destacando:
+1. Uma visão geral rápida dos dados (padrões gerais).
+2. Principais destaques (melhores desempenhos, anomalias, ou valores mais altos).
+3. Uma conclusão muito breve.
+
+Formate a resposta em texto corrido com parágrafos curtos, sem marcações markdown como *, # ou negritos, ideal para inserir diretamente em um relatório executivo. Responda obrigatoriamente em Português do Brasil. Seja objetivo e não invente dados.`;
+
+                    // 3. Chamar API do Groq
+                    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: 'llama3-8b-8192',
+                            messages: [{ role: 'user', content: prompt }],
+                            temperature: 0.7,
+                            max_tokens: 1024
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error?.message || 'Erro de autenticação ou limite da API do Groq');
+                    }
+
+                    const result = await response.json();
+                    const aiText = result.choices[0].message.content;
+
+                    // 4. Exibir resultado
+                    outAnaliseIA.textContent = aiText;
+                    sectionAI.classList.remove('hidden');
+
+                } catch (error) {
+                    console.error('Erro na análise da IA:', error);
+                    alert('Ocorreu um erro ao processar a planilha com a IA: ' + error.message);
+                } finally {
+                    btnAnalyzeAI.innerHTML = originalBtnContent;
+                    btnAnalyzeAI.disabled = false;
+                }
             });
         });
     </script>
